@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: screenbot-backend
+    env: python
+    buildCommand: ""
+    startCommand: "python app.py"
+    envVars:
+      - key: HF_TOKEN
+        sync: false
+    autoDeploy: true
