@@ -1,10 +1,9 @@
 services:
   - type: web
     name: screenbot-backend
-    env: python
-    buildCommand: ""
-    startCommand: "python app.py"
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
     envVars:
       - key: HF_TOKEN
-        sync: false
-    autoDeploy: true
+        sync: false  # Lo agregas luego manualmente en el panel

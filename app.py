@@ -37,3 +37,8 @@ def analyze():
         return jsonify({"idea": f"¿Sabías? Parece que estás viendo: {caption} 🤔"})
     else:
         return jsonify({"error": "Error en Hugging Face", "details": response.text}), 500
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
