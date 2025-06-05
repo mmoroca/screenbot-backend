@@ -1,43 +1,41 @@
 from flask import Flask, request, jsonify
-import requests
+from PIL import Image
 import base64
+import io
 import os
+import requests
+
+HUGGINGFACE_TOKEN = os.environ.get("HF_TOKEN")
 
 app = Flask(__name__)
-
-HF_TOKEN = os.getenv("HF_TOKEN")
-HF_API_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base"
-
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
-
-@app.route("/")
-def home():
-    return "Servidor activo 🧠"
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
     data = request.get_json()
-    image_b64 = data.get("image")
-
-    if not image_b64:
-        return jsonify({"error": "No image received"}), 400
+    if not data or "image" not in data:
+        print("❌ No image received in request")
+        return jsonify({"error": "No image provided"}), 400
 
     try:
-        image_bytes = base64.b64decode(image_b64.split(",")[1])  # Elimina encabezado "data:image/png;base64,..."
-    except Exception as e:
-        return jsonify({"error": "Decoding failed", "details": str(e)}), 400
+        image_data = data["image"].split(",")[1]
+        image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        print("✅ Image received and processed")
 
-    response = requests.post(HF_API_URL, headers=headers, files={"file": image_bytes})
+        response = requests.post(
+            "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base",
+            headers={"Authorization": f"Bearer {HUGGINGFACE_TOKEN}"},
+            files={"file": ("image.png", buffered.getvalue(), "image/png")}
+        )
 
-    if response.status_code == 200:
         result = response.json()
-        caption = result[0].get("generated_text", "No se pudo generar una descripción.")
-        return jsonify({"idea": f"¿Sabías? Parece que estás viendo: {caption} 🤔"})
-    else:
-        return jsonify({"error": "Error en Hugging Face", "details": response.text}), 500
-
+        print("🧠 HuggingFace response:", result)
+        caption = result[0]["generated_text"] if isinstance(result, list) else "No se pudo analizar la imagen."
+        return jsonify({"idea": caption})
+    except Exception as e:
+        print("🔥 Error:", e)
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
